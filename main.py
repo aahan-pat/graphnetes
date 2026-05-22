@@ -1,6 +1,4 @@
-def main():
-    print("Hello from graphnetes!")
-
+from graphnetes.cli.app import app
 
 if __name__ == "__main__":
-    main()
+    app()

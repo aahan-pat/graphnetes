@@ -6,6 +6,8 @@ the pod participates in: ownership, scheduling, service account,
 volume mounts, and namespace membership.
 """
 
+from __future__ import annotations
+
 from graphnetes.models import (
     Confidence,
     EdgeRelation,

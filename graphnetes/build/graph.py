@@ -5,6 +5,8 @@ Provides O(1) lookup indexes by (kind, namespace, name) and by namespace
 for subgraph queries.
 """
 
+from __future__ import annotations
+
 from collections import Counter
 
 import networkx as nx

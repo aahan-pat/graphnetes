@@ -38,17 +38,17 @@ uv sync
 
 **Build the graph from your current kubeconfig:**
 ```
-python main.py build
+uv run python main.py build
 ```
 
 **Scope to a specific context or namespace:**
 ```
-python main.py build --context prod-us-east --namespace payments
+uv run python main.py build --context prod-us-east --namespace payments
 ```
 
 **Open the browser visualization:**
 ```
-python main.py viz
+uv run python main.py viz
 ```
 
 **All commands:**

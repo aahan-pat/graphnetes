@@ -17,6 +17,6 @@ echo "==> Installing dependencies"
 uv sync
 
 echo "==> Done. Run the CLI with:"
-echo "    python main.py build"
-echo "    python main.py build --context <name> --namespace <name>"
-echo "    python main.py viz"
+echo "    uv run python main.py build"
+echo "    uv run python main.py build --context <name> --namespace <name>"
+echo "    uv run python main.py viz"

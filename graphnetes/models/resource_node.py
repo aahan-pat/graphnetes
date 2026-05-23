@@ -24,6 +24,15 @@ class ResourceNode:
             return f"{kind.value}/{namespace}/{name}"
         return f"{kind.value}/{name}"
 
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "kind": self.kind.value,
+            "name": self.name,
+            "namespace": self.namespace,
+            "labels": self.labels,
+        }
+
     @classmethod
     def from_resource(
         cls,

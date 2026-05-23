@@ -10,29 +10,8 @@ from pathlib import Path
 from typing import Any
 
 from graphnetes.build.graph import GraphBuilder
-from graphnetes.models import ResourceEdge, ResourceNode
 
 from ._template import HTML_TEMPLATE
-
-
-def _node_to_dict(node: ResourceNode) -> dict[str, Any]:
-    return {
-        "id": node.id,
-        "kind": node.kind.value,
-        "name": node.name,
-        "namespace": node.namespace,
-        "labels": node.labels,
-    }
-
-
-def _edge_to_dict(source_id: str, target_id: str, edge: ResourceEdge) -> dict[str, Any]:
-    return {
-        "source": source_id,
-        "target": target_id,
-        "relation": edge.relation.value,
-        "confidence": edge.confidence.value,
-        "weight": edge.weight,
-    }
 
 
 def _stub_node_from_id(node_id: str) -> dict[str, Any]:
@@ -53,12 +32,12 @@ def _graph_to_dict(builder: GraphBuilder) -> dict[str, Any]:
     for n in builder.graph.nodes:
         node_data = builder.graph.nodes[n]
         if "data" in node_data:
-            nodes.append(_node_to_dict(node_data["data"]))
+            nodes.append(node_data["data"].to_dict())
         else:
             nodes.append(_stub_node_from_id(n))
 
     edges = [
-        _edge_to_dict(u, v, builder.graph.edges[u, v]["data"])
+        builder.graph.edges[u, v]["data"].to_dict()
         for u, v in builder.graph.edges
     ]
     return {"nodes": nodes, "edges": edges}

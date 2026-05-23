@@ -18,6 +18,15 @@ class ResourceEdge:
     weight: float = 1.0
     metadata: dict[str, Any] = field(default_factory=dict)
 
+    def to_dict(self) -> dict:
+        return {
+            "source": self.source_id,
+            "target": self.target_id,
+            "relation": self.relation.value,
+            "confidence": self.confidence.value,
+            "weight": self.weight,
+        }
+
     def __post_init__(self) -> None:
         if self.confidence == Confidence.EXTRACTED and self.confidence_score != 1.0:
             raise ValueError("EXTRACTED edges must have confidence_score=1.0")

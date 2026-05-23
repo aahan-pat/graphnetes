@@ -36,8 +36,9 @@ def build(
     builder = GraphBuilder()
 
     for raw in ingestor.fetch(namespace=namespace):
-        builder.add_node(extractor.extract_node(raw))
-        builder.add_edges(extractor.extract_edges(raw))
+        node, edges = extractor.extract(raw)
+        builder.add_node(node)
+        builder.add_edges(edges)
 
     stats = builder.stats()
     console.print(f"[green]Graph built:[/green] {stats['nodes']} nodes, {stats['edges']} edges")

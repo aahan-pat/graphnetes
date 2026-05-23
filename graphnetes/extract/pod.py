@@ -21,16 +21,14 @@ from .base import BaseExtractor, RawResource
 
 
 class PodExtractor(BaseExtractor):
+    def extract(self, resource: RawResource) -> tuple[ResourceNode, list[ResourceEdge]]:
+        """Parse the resource once and return node and edges together."""
+        pod = Pod.from_dict(resource)
+        return self._node_from_pod(pod), self._edges_from_pod(pod)
+
     def extract_node(self, resource: RawResource) -> ResourceNode:
         """Return the ResourceNode for the pod."""
-        pod = Pod.from_dict(resource)
-
-        return ResourceNode.from_resource(
-            kind=ResourceKind.POD,
-            name=pod.name,
-            namespace=pod.namespace,
-            labels=pod.labels,
-        )
+        return self._node_from_pod(Pod.from_dict(resource))
 
     def extract_edges(self, resource: RawResource) -> list[ResourceEdge]:
         """
@@ -43,7 +41,17 @@ class PodExtractor(BaseExtractor):
           - mounts:               Pod → ConfigMap / Secret / PVC
           - in_namespace:         Pod → Namespace
         """
-        pod = Pod.from_dict(resource)
+        return self._edges_from_pod(Pod.from_dict(resource))
+
+    def _node_from_pod(self, pod: Pod) -> ResourceNode:
+        return ResourceNode.from_resource(
+            kind=ResourceKind.POD,
+            name=pod.name,
+            namespace=pod.namespace,
+            labels=pod.labels,
+        )
+
+    def _edges_from_pod(self, pod: Pod) -> list[ResourceEdge]:
         edges: list[ResourceEdge] = []
 
         edges.extend(self._extract_owner_edges(pod))

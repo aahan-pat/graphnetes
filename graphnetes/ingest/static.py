@@ -6,9 +6,11 @@ and returns raw resource dicts. No watch; the graph reflects the cluster state
 at the moment of the call.
 """
 
+from __future__ import annotations
+
 import os
 from pathlib import Path
-from typing import Any, Generator, Optional
+from typing import Any, Generator
 
 from kubernetes import client, config
 from kubernetes.config.config_exception import ConfigException
@@ -31,8 +33,8 @@ _DEFAULT_KUBECONFIG = Path.home() / ".kube" / "config"
 class StaticIngestor:
     def __init__(
         self,
-        kubeconfig: Optional[str] = None,
-        context: Optional[str] = None,
+        kubeconfig: str | None = None,
+        context: str | None = None,
     ) -> None:
         kubeconfig_path = Path(kubeconfig) if kubeconfig else None
 
@@ -85,7 +87,7 @@ class StaticIngestor:
         for pod in self.v1.list_pod_for_all_namespaces(watch=False).items:
             yield pod.to_dict()
 
-    def fetch(self, namespace: Optional[str] = None) -> Generator[RawResource, None, None]:
+    def fetch(self, namespace: str | None = None) -> Generator[RawResource, None, None]:
         """
         Main entry point. Scopes to namespace if given, otherwise fetches the full cluster.
         """

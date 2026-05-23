@@ -6,8 +6,11 @@ across all supported resource kinds. Intended to keep an already-built graph
 up to date without a full rebuild.
 """
 
-from typing import Any, AsyncGenerator, Optional
+from __future__ import annotations
+
+from dataclasses import dataclass
 from enum import Enum
+from typing import Any, AsyncGenerator
 
 
 RawResource = dict[str, Any]
@@ -19,6 +22,7 @@ class EventType(str, Enum):
     DELETED = "DELETED"
 
 
+@dataclass
 class WatchEvent:
     type: EventType
     resource: RawResource
@@ -26,23 +30,23 @@ class WatchEvent:
 
 async def watch_namespace(
     namespace: str,
-    context: Optional[str] = None,
+    context: str | None = None,
 ) -> AsyncGenerator[WatchEvent, None]:
     """Stream watch events for all resources in a single namespace."""
     raise NotImplementedError
 
 
 async def watch_cluster(
-    context: Optional[str] = None,
+    context: str | None = None,
 ) -> AsyncGenerator[WatchEvent, None]:
     """Stream watch events for all resources across every namespace in the cluster."""
     raise NotImplementedError
 
 
 async def watch(
-    context: Optional[str] = None,
-    namespace: Optional[str] = None,
-    kubeconfig: Optional[str] = None,
+    context: str | None = None,
+    namespace: str | None = None,
+    kubeconfig: str | None = None,
 ) -> AsyncGenerator[WatchEvent, None]:
     """
     Main entry point for live ingestion.

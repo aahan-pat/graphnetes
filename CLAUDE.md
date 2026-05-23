@@ -31,3 +31,15 @@ EXTRACTED = "EXTRACTED"
 # Bad
 EXTRACTED = "EXTRACTED"  # directly derived from resource spec
 ```
+
+Comments must be written as full sentences, not shorthand notation:
+
+```python
+# Good
+# A Pod scheduled onto a Node.
+SCHEDULED_ON = "scheduled_on"
+
+# Bad
+# Pod → Node
+SCHEDULED_ON = "scheduled_on"
+```

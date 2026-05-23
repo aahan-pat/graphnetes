@@ -18,10 +18,10 @@ class GraphBuilder:
     def __init__(self) -> None:
         self.graph = nx.DiGraph()
 
-        # (kind, namespace, name) → node_id
+        # Keyed by (kind, namespace, name) for O(1) node lookup.
         self._kind_index: dict[tuple[ResourceKind, str | None, str], str] = {}
 
-        # namespace → list of node_ids
+        # Keyed by namespace, each value is the list of node IDs in that namespace.
         self._namespace_index: dict[str, list[str]] = {}
 
     def add_node(self, node: ResourceNode) -> None:

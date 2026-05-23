@@ -2,27 +2,27 @@ from enum import Enum
 
 
 class EdgeRelation(str, Enum):
-    # ownerReferences (Deployment → ReplicaSet → Pod)
+    # Derived from ownerReferences, e.g. Deployment owns ReplicaSet owns Pod.
     OWNS = "owns"
-    # labelSelector match (Service/Deployment → Pod)
+    # Derived from a labelSelector match, e.g. a Service or Deployment selecting Pods.
     SELECTS = "selects"
-    # Ingress → Service
+    # An Ingress routing traffic to a Service.
     ROUTES_TO = "routes_to"
-    # Pod mounts ConfigMap / Secret / PVC
+    # A Pod mounting a ConfigMap, Secret, or PersistentVolumeClaim.
     MOUNTS = "mounts"
-    # Pod → ServiceAccount
+    # A Pod bound to a ServiceAccount.
     USES_SERVICE_ACCOUNT = "uses_service_account"
-    # Pod → Node
+    # A Pod scheduled onto a Node.
     SCHEDULED_ON = "scheduled_on"
-    # NetworkPolicy → Pod
+    # A NetworkPolicy applying to a set of Pods.
     APPLIES_TO = "applies_to"
-    # HPA → Deployment / StatefulSet
+    # An HorizontalPodAutoscaler scaling a Deployment or StatefulSet.
     SCALES = "scales"
-    # PVC → PV
+    # A PersistentVolumeClaim bound to a PersistentVolume.
     BOUND_TO = "bound_to"
-    # Namespaced resource → Namespace
+    # A namespaced resource belonging to a Namespace.
     IN_NAMESPACE = "in_namespace"
-    # Inferred from NetworkPolicy allow rules
+    # Inferred from NetworkPolicy allow rules between workloads.
     COMMUNICATES_WITH = "communicates_with"
-    # RoleBinding → Role + ServiceAccount
+    # A RoleBinding granting a Role to a ServiceAccount.
     GRANTS = "grants"

@@ -19,3 +19,8 @@ wheels/
 graphnetes-out/
 cluster-dump.json
 uv.lock
+
+# pydeps
+*.svg
+*.png
+/deps/

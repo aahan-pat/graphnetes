@@ -15,7 +15,13 @@ from ._template import HTML_TEMPLATE
 
 
 def _stub_node_from_id(node_id: str) -> dict[str, Any]:
-    """Build a minimal node dict for a stub node (referenced by an edge but not ingested)."""
+    """
+    Build a minimal node dict for nodes that appear as edge targets but were never ingested.
+
+    NetworkX auto-creates an attribute-less node whenever add_edge references an unknown ID.
+    This happens for resource kinds we don't fetch yet (Namespace, Node, ServiceAccount, etc.).
+    Without this, the visualizer silently drops every edge pointing to one of those nodes.
+    """
     parts = node_id.split("/")
     if len(parts) == 3:
         kind, namespace, name = parts

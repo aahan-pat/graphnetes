@@ -7,7 +7,7 @@ name = "graphnetes"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "kubernetes>=36.0.0",
     "networkx>=3.6.1",

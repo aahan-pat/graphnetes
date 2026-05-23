@@ -13,7 +13,8 @@ class ResourceEdge:
     target_id: str
     relation: EdgeRelation
     confidence: Confidence = Confidence.EXTRACTED
-    confidence_score: float = 1.0       # 0.0–1.0; EXTRACTED always 1.0
+    # 0.0–1.0; EXTRACTED always 1.0
+    confidence_score: float = 1.0
     weight: float = 1.0
     metadata: dict[str, Any] = field(default_factory=dict)
 

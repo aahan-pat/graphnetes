@@ -8,10 +8,12 @@ from .resource_kind import ResourceKind
 
 @dataclass
 class ResourceNode:
-    id: str                         # "{kind}/{namespace}/{name}" or "{kind}/{name}" for cluster-scoped
+    # "{kind}/{namespace}/{name}" or "{kind}/{name}" for cluster-scoped
+    id: str
     kind: ResourceKind
     name: str
-    namespace: str | None           # None for cluster-scoped resources
+    # None for cluster-scoped resources
+    namespace: str | None
     labels: dict[str, str] = field(default_factory=dict)
     annotations: dict[str, str] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)

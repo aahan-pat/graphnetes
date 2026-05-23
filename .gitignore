@@ -1,7 +1,7 @@
 # Python-generated files
 __pycache__/
 *.py[oc]
-build/
+/build/
 dist/
 wheels/
 *.egg-info
@@ -14,3 +14,8 @@ wheels/
 
 # Intellij
 .idea
+
+# Generated output
+graphnetes-out/
+cluster-dump.json
+uv.lock

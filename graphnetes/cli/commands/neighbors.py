@@ -58,12 +58,12 @@ def neighbors_cmd(
     if outgoing:
         console.print(f"[dim]Outgoing ({len(outgoing)})[/dim]")
         for edge in outgoing:
-            console.print(f"  [green]{edge['relation']}[/green] -> {edge['target']}")
+            console.print(f"  [green]{edge['relation']}[/green] → {edge['target']}")
 
     if incoming:
         console.print(f"\n[dim]Incoming ({len(incoming)})[/dim]")
         for edge in incoming:
-            console.print(f"  [green]{edge['relation']}[/green] <- {edge['source']}")
+            console.print(f"  [green]{edge['relation']}[/green] ← {edge['source']}")
 
     if not outgoing and not incoming:
         console.print("[dim]No neighbors found.[/dim]")

@@ -1,6 +1,6 @@
 # Graphnetes
 
-A knowledge graph engine for Kubernetes clusters. Every resource becomes a node, every relationship becomes a typed edge — giving you a queryable graph that answers questions `kubectl` cannot.
+A knowledge graph engine for Kubernetes clusters. Every resource becomes a node, every relationship becomes a typed edge allowing easy enumeration for any cluster. 
 
 ```
 graphnetes build --context prod --namespace payments

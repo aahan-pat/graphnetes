@@ -31,6 +31,7 @@ class ResourceNode:
             "name": self.name,
             "namespace": self.namespace,
             "labels": self.labels,
+            "metadata": self.metadata,
         }
 
     @classmethod

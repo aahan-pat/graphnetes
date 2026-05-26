@@ -1,23 +1,14 @@
-"""Per-kind extractor functions and the EXTRACTORS registry.
-
-Each function takes a raw k8s API dict and returns all nodes and edges
-derived from that resource.
-"""
+"""Extractors for Pod and workload controller kinds."""
 
 from __future__ import annotations
 
-from typing import Any
-
 from graphnetes.models import Confidence, EdgeRelation, ResourceEdge, ResourceKind, ResourceNode
-from .registry import ExtractorRegistry
+from graphnetes.extract.registry import ExtractorRegistry
+from graphnetes.extract.helpers import Raw, Extracted, manifest_result, namespace_edge, owner_edges
+from graphnetes.extract.models import DaemonSet, Deployment, Pod, ReplicaSet, StatefulSet
 
-from .helpers import manifest_result, namespace_edge, owner_edges
-from .models import DaemonSet, Deployment, Pod, ReplicaSet, StatefulSet
 
-RawResource = dict[str, Any]
-Extracted = tuple[list[ResourceNode], list[ResourceEdge]]
-
-def _workload_node(kind: ResourceKind, model: Any) -> ResourceNode:
+def _workload_node(kind: ResourceKind, model) -> ResourceNode:
     return ResourceNode.from_resource(
         kind=kind,
         name=model.name,
@@ -27,8 +18,9 @@ def _workload_node(kind: ResourceKind, model: Any) -> ResourceNode:
         metadata={"replicas": getattr(model, "replicas", None), "selector": model.selector},
     )
 
-def _extract_workload(kind: ResourceKind, parser: Any, raw: RawResource) -> Extracted:
-    model = parser.from_dict(raw)
+
+def _extract_workload(kind: ResourceKind, cls, raw: Raw) -> Extracted:
+    model = cls.from_dict(raw)
     node = _workload_node(kind, model)
     edges: list[ResourceEdge] = []
     edges.extend(owner_edges(kind, model.name, model.namespace, model.owner_references))
@@ -39,20 +31,24 @@ def _extract_workload(kind: ResourceKind, parser: Any, raw: RawResource) -> Extr
         edges.append(pair[1])
     return nodes, edges
 
+
 @ExtractorRegistry.register("Deployment")
-def extract_deployment(raw: RawResource) -> Extracted:
+def extract_deployment(raw: Raw) -> Extracted:
     return _extract_workload(ResourceKind.DEPLOYMENT, Deployment, raw)
 
+
 @ExtractorRegistry.register("ReplicaSet")
-def extract_replica_set(raw: RawResource) -> Extracted:
+def extract_replica_set(raw: Raw) -> Extracted:
     return _extract_workload(ResourceKind.REPLICA_SET, ReplicaSet, raw)
 
+
 @ExtractorRegistry.register("DaemonSet")
-def extract_daemon_set(raw: RawResource) -> Extracted:
+def extract_daemon_set(raw: Raw) -> Extracted:
     return _extract_workload(ResourceKind.DAEMON_SET, DaemonSet, raw)
 
+
 @ExtractorRegistry.register("StatefulSet")
-def extract_stateful_set(raw: RawResource) -> Extracted:
+def extract_stateful_set(raw: Raw) -> Extracted:
     model = StatefulSet.from_dict(raw)
     node = _workload_node(ResourceKind.STATEFUL_SET, model)
     edges: list[ResourceEdge] = []
@@ -74,8 +70,9 @@ def extract_stateful_set(raw: RawResource) -> Extracted:
         edges.append(pair[1])
     return nodes, edges
 
+
 @ExtractorRegistry.register("Pod")
-def extract_pod(raw: RawResource) -> Extracted:
+def extract_pod(raw: Raw) -> Extracted:
     pod = Pod.from_dict(raw)
     node = ResourceNode.from_resource(
         kind=ResourceKind.POD,

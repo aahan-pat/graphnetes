@@ -11,7 +11,7 @@ from typing import Any
 
 from graphnetes.build.graph import GraphBuilder
 
-from _template import HTML_TEMPLATE
+from ._template import HTML_TEMPLATE
 
 
 def _stub_node_from_id(node_id: str) -> dict[str, Any]:

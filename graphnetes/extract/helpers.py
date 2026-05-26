@@ -1,4 +1,4 @@
-"""Shared edge and node builders used across all extractor functions."""
+"""Shared types, edge builders, and node builders used across all extractor functions."""
 
 from __future__ import annotations
 
@@ -9,6 +9,20 @@ from typing import Any
 from graphnetes.models import Confidence, EdgeRelation, ResourceEdge, ResourceKind, ResourceNode
 
 from .models import OwnerReference
+
+Raw = dict[str, Any]
+Extracted = tuple[list[ResourceNode], list[ResourceEdge]]
+
+
+def parse_metadata(raw: Raw) -> tuple[str, str | None, dict[str, str], dict[str, str]]:
+    """Return (name, namespace, labels, annotations) from a raw resource dict."""
+    metadata = raw.get("metadata") or {}
+    return (
+        metadata["name"],
+        metadata.get("namespace"),
+        metadata.get("labels") or {},
+        metadata.get("annotations") or {},
+    )
 
 
 def owner_edges(

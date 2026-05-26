@@ -3,6 +3,17 @@
 These dataclasses are intermediate representations — they parse raw k8s API
 dicts into typed objects that the extractor functions then convert into
 ResourceNode and ResourceEdge instances. They are not shared outside extract/.
+
+When to add a model here vs parsing inline in the extractor:
+
+  Add a model when the resource has nested structures (e.g. volumes, containers,
+  owner references) or enough fields that from_dict would exceed ~6 lines. The
+  model isolates k8s parsing quirks (None-returning fields, nested dicts) from
+  edge-building logic and makes the extractor readable.
+
+  Parse inline when the resource only has flat fields readable in a few lines of
+  standard `or {}` chains. ConfigMap, Secret, Namespace, ServiceAccount, and
+  Service are examples where a model class would add ceremony without clarity.
 """
 
 from __future__ import annotations

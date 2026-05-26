@@ -68,20 +68,21 @@ class GraphBuilder:
         ]
 
     def build_selector_edges(self) -> None:
-        """Build selects edges between controllers and Pods by matching label selectors.
+        """Build selects edges between selectors and Pods by matching label selectors.
 
-        Runs as a post-processing pass after all nodes are added. For each controller
-        node that carries a selector in its metadata, checks every Pod node to see
-        whether the selector labels are a subset of the Pod's labels. Adds a selects
-        edge for each match.
+        Runs as a post-processing pass after all nodes are added. For each node that
+        carries a selector in its metadata, checks every Pod node to see whether the
+        selector labels are a subset of the Pod's labels. Adds a selects edge for each
+        match.
 
-        Controllers covered: Deployment, ReplicaSet, StatefulSet, DaemonSet.
+        Kinds covered: Deployment, ReplicaSet, StatefulSet, DaemonSet, Service.
         """
         controller_kinds = [
             ResourceKind.DEPLOYMENT,
             ResourceKind.REPLICA_SET,
             ResourceKind.STATEFUL_SET,
             ResourceKind.DAEMON_SET,
+            ResourceKind.SERVICE,
         ]
         pods = self.get_nodes_by_kind(ResourceKind.POD)
 

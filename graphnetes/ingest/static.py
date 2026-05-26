@@ -30,11 +30,15 @@ KUBECONFIG = Path.home() / ".kube" / "config"
 #   4. Error
 class StaticIngestor:
 
-    calls: list[tuple[str, str, str, str]] = []
+    calls: list[tuple[str, str | None, str, str]] = []
 
     @staticmethod
-    def register(client: str, namespaced: str, cluster: str, kind: str) -> None:
-        """Register a Kubernetes API list call."""
+    def register(client: str, namespaced: str | None, cluster: str, kind: str) -> None:
+        """Register a Kubernetes API list call.
+
+        Pass None for namespaced when the resource is cluster-scoped and has no
+        namespaced list method (e.g. Namespace, Node, PersistentVolume).
+        """
         StaticIngestor.calls.append((client, namespaced, cluster, kind))
 
     def __init__(
@@ -82,6 +86,8 @@ class StaticIngestor:
         self.api_client = client.ApiClient(configuration)
         self.v1 = client.CoreV1Api(self.api_client)
         self.apps_v1 = client.AppsV1Api(self.api_client)
+        self.networking_v1 = client.NetworkingV1Api(self.api_client)
+        self.autoscaling_v2 = client.AutoscalingV2Api(self.api_client)
 
     def fetch(self, namespace: str | None = None) -> Generator[RawResource, None, None]:
         """Yield raw dicts for all supported resource kinds.
@@ -91,8 +97,12 @@ class StaticIngestor:
         """
         for client_name, namespaced_method, cluster_method, kind in StaticIngestor.calls:
             api = getattr(self, client_name)
-            method = getattr(api, namespaced_method if namespace else cluster_method)
-            args = (namespace,) if namespace else ()
+            if namespace and namespaced_method:
+                method = getattr(api, namespaced_method)
+                args = (namespace,)
+            else:
+                method = getattr(api, cluster_method)
+                args = ()
             for item in method(*args).items:
                 raw = item.to_dict()
                 raw["kind"] = kind

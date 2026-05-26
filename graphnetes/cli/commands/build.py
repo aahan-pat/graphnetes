@@ -18,6 +18,7 @@ def build(
     kubeconfig: Optional[Path] = typer.Option(None, "--kubeconfig", help="Path to kubeconfig file."),
     context: Optional[str] = typer.Option(None, "--context", "-c", help="Kubernetes context to use."),
     namespace: Optional[str] = typer.Option(None, "--namespace", "-n", help="Scope to a single namespace."),
+    exclude: list[str] = typer.Option([], "--exclude-namespace", "-e", help="Namespaces to exclude. Repeatable."),
     output: Path = typer.Option(Path("graphnetes-out"), "--output", "-o", help="Output directory for graph files."),
 ) -> None:
     try:
@@ -33,7 +34,7 @@ def build(
 
     builder = GraphBuilder()
 
-    for raw in ingestor.fetch(namespace=namespace):
+    for raw in ingestor.fetch(namespace=namespace, exclude=set(exclude) or None):
         extract = ExtractorRegistry.extractors.get(raw.get("kind", ""))
         if extract is None:
             continue

@@ -10,7 +10,7 @@ app = typer.Typer(
 
 app.add_typer(build.app, name="build")
 app.add_typer(query.app, name="query")
-app.add_typer(path.app, name="path")
+app.command("path", help="Find the shortest path between two resources.")(path.path_cmd)
 app.add_typer(blast_radius.app, name="blast-radius")
 app.add_typer(anomalies.app, name="anomalies")
 app.add_typer(serve.app, name="serve")

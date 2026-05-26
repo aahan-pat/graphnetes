@@ -7,7 +7,9 @@ for subgraph queries.
 
 from __future__ import annotations
 
+import json
 from collections import Counter
+from pathlib import Path
 
 import networkx as nx
 
@@ -102,6 +104,41 @@ class GraphBuilder:
                             relation=EdgeRelation.SELECTS,
                             confidence=Confidence.INFERRED,
                         ))
+
+    def shortest_path(self, source_id: str, target_id: str) -> list[ResourceNode]:
+        """Return the ResourceNode objects on the shortest directed path between two nodes."""
+        try:
+            ids = nx.shortest_path(self.graph, source=source_id, target=target_id)
+        except nx.NetworkXNoPath:
+            raise ValueError(f"no path from {source_id!r} to {target_id!r}")
+        except nx.NodeNotFound as e:
+            raise ValueError(str(e))
+        return [self.graph.nodes[node_id]["data"] for node_id in ids]
+
+    @classmethod
+    def load(cls, path: Path) -> GraphBuilder:
+        """Reconstruct a GraphBuilder from a graph.json produced by export_json."""
+        data = json.loads(path.read_text())
+        builder = cls()
+        for node_dict in data["nodes"]:
+            node = ResourceNode.from_resource(
+                kind=ResourceKind.from_str(node_dict["kind"]),
+                name=node_dict["name"],
+                namespace=node_dict.get("namespace"),
+                labels=node_dict.get("labels") or {},
+                metadata=node_dict.get("metadata") or {},
+            )
+            builder.add_node(node)
+        for edge_dict in data["edges"]:
+            edge = ResourceEdge(
+                source_id=edge_dict["source"],
+                target_id=edge_dict["target"],
+                relation=EdgeRelation(edge_dict["relation"]),
+                confidence=Confidence(edge_dict["confidence"]),
+                weight=edge_dict.get("weight", 1.0),
+            )
+            builder.add_edge(edge)
+        return builder
 
     def stats(self) -> dict:
         """Return node count, edge count, and breakdown by kind."""

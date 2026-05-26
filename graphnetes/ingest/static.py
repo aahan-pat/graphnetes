@@ -89,11 +89,16 @@ class StaticIngestor:
         self.networking_v1 = client.NetworkingV1Api(self.api_client)
         self.autoscaling_v2 = client.AutoscalingV2Api(self.api_client)
 
-    def fetch(self, namespace: str | None = None) -> Generator[RawResource, None, None]:
+    def fetch(
+        self,
+        namespace: str | None = None,
+        exclude: set[str] | None = None,
+    ) -> Generator[RawResource, None, None]:
         """Yield raw dicts for all supported resource kinds.
 
         Scopes to namespace if given, otherwise fetches the full cluster.
         Injects the kind string on each item because the k8s list API returns kind=None.
+        Skips any resource whose namespace (or, for Namespace nodes, whose name) is in exclude.
         """
         for client_name, namespaced_method, cluster_method, kind in StaticIngestor.calls:
             api = getattr(self, client_name)
@@ -106,4 +111,11 @@ class StaticIngestor:
             for item in method(*args).items:
                 raw = item.to_dict()
                 raw["kind"] = kind
+                if exclude:
+                    meta = raw.get("metadata") or {}
+                    if kind == "Namespace":
+                        if meta.get("name") in exclude:
+                            continue
+                    elif meta.get("namespace") in exclude:
+                        continue
                 yield raw

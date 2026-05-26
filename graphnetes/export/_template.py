@@ -103,7 +103,21 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     .detail-namespace {
       font-size: 12px;
       color: #64748b;
+      margin-bottom: 8px;
+    }
+
+    .detail-id {
+      font-size: 11px;
+      font-family: monospace;
+      color: #475569;
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 3px;
+      padding: 4px 6px;
       margin-bottom: 16px;
+      word-break: break-all;
+      user-select: all;
+      cursor: text;
     }
 
     .detail-section {
@@ -326,6 +340,10 @@ function render(namespaceFilter) {
   if (network) network.destroy();
   network = new vis.Network(container, data, options);
 
+  network.once("stabilizationIterationsDone", () => {
+    network.setOptions({ physics: false });
+  });
+
   network.on("click", params => {
     if (!params.nodes.length) return;
     const nodeId = params.nodes[0];
@@ -343,6 +361,7 @@ function showDetail(node, edges, nodeId) {
     <div class="detail-kind" style="background:${color}22;color:${color}">${node.kind}</div>
     <div class="detail-name">${node.name}</div>
     <div class="detail-namespace">${node.namespace || "cluster-scoped"}</div>
+    <div class="detail-id">${node.id}</div>
   `;
 
   if (Object.keys(node.labels || {}).length) {

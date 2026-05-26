@@ -54,6 +54,13 @@ class GraphBuilder:
             return None
         return self.graph.nodes[node_id]["data"]
 
+    def get_node_by_id(self, node_id: str) -> ResourceNode | None:
+        """Look up a node by its full ID string. Returns None if not found or a stub."""
+        node_data = self.graph.nodes.get(node_id)
+        if node_data is None or "data" not in node_data:
+            return None
+        return node_data["data"]
+
     def get_namespace_subgraph(self, namespace: str) -> nx.DiGraph:
         """Return a subgraph scoped to a single namespace."""
         node_ids = self._namespace_index.get(namespace, [])

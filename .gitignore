@@ -11,6 +11,7 @@ wheels/
 
 # AI
 .claude
+CLAUDE.md
 
 # Intellij
 .idea

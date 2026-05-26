@@ -28,6 +28,21 @@ def extract_service(raw: Raw) -> Extracted:
     return [node], edges
 
 
+def _service_names(spec: dict) -> list[str]:
+    """Collect all service names referenced in Ingress rules and default backend."""
+    names = []
+    for rule in (spec.get("rules") or []):
+        http = (rule or {}).get("http") or {}
+        for path in (http.get("paths") or []):
+            svc = ((path or {}).get("backend") or {}).get("service") or {}
+            if name := svc.get("name"):
+                names.append(name)
+    default_svc = (spec.get("default_backend") or {}).get("service") or {}
+    if name := default_svc.get("name"):
+        names.append(name)
+    return names
+
+
 @ExtractorRegistry.register("Ingress")
 def extract_ingress(raw: Raw) -> Extracted:
     name, namespace, labels, annotations = parse_metadata(raw)
@@ -42,21 +57,7 @@ def extract_ingress(raw: Raw) -> Extracted:
     )
 
     edges: list[ResourceEdge] = [namespace_edge(ResourceKind.INGRESS, name, namespace)]
-
-    # Collect all service names referenced across rules and the default backend.
-    service_names: list[str] = []
-    for rule in (spec.get("rules") or []):
-        http = (rule or {}).get("http") or {}
-        for path in (http.get("paths") or []):
-            svc = ((path or {}).get("backend") or {}).get("service") or {}
-            if svc_name := svc.get("name"):
-                service_names.append(svc_name)
-
-    default_svc = (spec.get("default_backend") or {}).get("service") or {}
-    if svc_name := default_svc.get("name"):
-        service_names.append(svc_name)
-
-    for svc_name in service_names:
+    for svc_name in _service_names(spec):
         edges.append(ResourceEdge(
             source_id=node.id,
             target_id=ResourceNode.make_id(ResourceKind.SERVICE, svc_name, namespace),

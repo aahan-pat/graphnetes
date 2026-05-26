@@ -49,10 +49,5 @@ async def watch(
     namespace: str | None = None,
     kubeconfig: str | None = None,
 ) -> AsyncGenerator[WatchEvent, None]:
-    """
-    Main entry point for live ingestion.
-
-    If namespace is given, scopes the watch to that namespace only.
-    Otherwise watches the full cluster.
-    """
+    """Dispatch to watch_namespace or watch_cluster depending on whether namespace is given."""
     raise NotImplementedError

@@ -16,6 +16,15 @@ import networkx as nx
 from graphnetes.models import Confidence, EdgeRelation, ResourceEdge, ResourceKind, ResourceNode
 
 
+def _matched_pods(controller: ResourceNode, pods: list[ResourceNode]) -> list[ResourceNode]:
+    selector: dict[str, str] = controller.metadata.get("selector") or {}
+    if not selector:
+        return []
+    # dict_items supports <= as a subset test.
+    items = selector.items()
+    return [pod for pod in pods if items <= pod.labels.items()]
+
+
 class GraphBuilder:
     def __init__(self) -> None:
         self.graph = nx.DiGraph()
@@ -34,7 +43,6 @@ class GraphBuilder:
             self._namespace_index.setdefault(node.namespace, []).append(node.id)
 
     def add_edge(self, edge: ResourceEdge) -> None:
-        """Add a ResourceEdge to the graph."""
         self.graph.add_edge(edge.source_id, edge.target_id, data=edge)
 
     def add_nodes(self, nodes: list[ResourceNode]) -> None:
@@ -77,12 +85,7 @@ class GraphBuilder:
         ]
 
     def build_selector_edges(self) -> None:
-        """Build selects edges between selectors and Pods by matching label selectors.
-
-        Runs as a post-processing pass after all nodes are added. For each node that
-        carries a selector in its metadata, checks every Pod node to see whether the
-        selector labels are a subset of the Pod's labels. Adds a selects edge for each
-        match.
+        """Post-processing pass: add SELECTS edges by matching label selectors to Pods.
 
         Kinds covered: Deployment, ReplicaSet, StatefulSet, DaemonSet, Service.
         """
@@ -97,20 +100,13 @@ class GraphBuilder:
 
         for kind in controller_kinds:
             for controller in self.get_nodes_by_kind(kind):
-                selector: dict[str, str] = controller.metadata.get("selector") or {}
-                if not selector:
-                    continue
-                selector_items = selector.items()
-                for pod in pods:
-                    # dict_items supports <= as a subset test, returning True when every
-                    # selector key-value pair is present in pod.labels.
-                    if selector_items <= pod.labels.items():
-                        self.add_edge(ResourceEdge(
-                            source_id=controller.id,
-                            target_id=pod.id,
-                            relation=EdgeRelation.SELECTS,
-                            confidence=Confidence.INFERRED,
-                        ))
+                for pod in _matched_pods(controller, pods):
+                    self.add_edge(ResourceEdge(
+                        source_id=controller.id,
+                        target_id=pod.id,
+                        relation=EdgeRelation.SELECTS,
+                        confidence=Confidence.INFERRED,
+                    ))
 
     def shortest_path(self, source_id: str, target_id: str) -> list[ResourceNode]:
         """Return the ResourceNode objects on the shortest directed path between two nodes."""

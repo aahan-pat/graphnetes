@@ -32,43 +32,58 @@ def _extract_workload(kind: ResourceKind, cls, raw: Raw) -> Extracted:
     return nodes, edges
 
 
-@ExtractorRegistry.register("Deployment")
-def extract_deployment(raw: Raw) -> Extracted:
-    return _extract_workload(ResourceKind.DEPLOYMENT, Deployment, raw)
+_SIMPLE_WORKLOADS = (
+    ("Deployment", ResourceKind.DEPLOYMENT, Deployment),
+    ("ReplicaSet", ResourceKind.REPLICA_SET, ReplicaSet),
+    ("DaemonSet", ResourceKind.DAEMON_SET, DaemonSet),
+)
 
-
-@ExtractorRegistry.register("ReplicaSet")
-def extract_replica_set(raw: Raw) -> Extracted:
-    return _extract_workload(ResourceKind.REPLICA_SET, ReplicaSet, raw)
-
-
-@ExtractorRegistry.register("DaemonSet")
-def extract_daemon_set(raw: Raw) -> Extracted:
-    return _extract_workload(ResourceKind.DAEMON_SET, DaemonSet, raw)
+for _name, _kind, _cls in _SIMPLE_WORKLOADS:
+    ExtractorRegistry.register(_name)(lambda raw, k=_kind, c=_cls: _extract_workload(k, c, raw))
 
 
 @ExtractorRegistry.register("StatefulSet")
 def extract_stateful_set(raw: Raw) -> Extracted:
+    nodes, edges = _extract_workload(ResourceKind.STATEFUL_SET, StatefulSet, raw)
     model = StatefulSet.from_dict(raw)
-    node = _workload_node(ResourceKind.STATEFUL_SET, model)
-    edges: list[ResourceEdge] = []
-    edges.extend(owner_edges(ResourceKind.STATEFUL_SET, model.name, model.namespace, model.owner_references))
-    edges.append(namespace_edge(ResourceKind.STATEFUL_SET, model.name, model.namespace))
     for name in model.volume_claim_template_names:
         # The k8s API can return volume claim templates with a null metadata block,
         # producing an empty string here.
         if name:
             edges.append(ResourceEdge(
-                source_id=node.id,
+                source_id=nodes[0].id,
                 target_id=ResourceNode.make_id(ResourceKind.PERSISTENT_VOLUME_CLAIM, name, model.namespace),
                 relation=EdgeRelation.MOUNTS,
                 confidence=Confidence.EXTRACTED,
             ))
-    nodes = [node]
-    if pair := manifest_result(raw, node.id):
-        nodes.append(pair[0])
-        edges.append(pair[1])
     return nodes, edges
+
+
+def _volume_edges(node_id: str, namespace: str, volumes) -> list[ResourceEdge]:
+    edges = []
+    for volume in volumes:
+        if volume.config_map:
+            edges.append(ResourceEdge(
+                source_id=node_id,
+                target_id=ResourceNode.make_id(ResourceKind.CONFIG_MAP, volume.config_map, namespace),
+                relation=EdgeRelation.MOUNTS,
+                confidence=Confidence.EXTRACTED,
+            ))
+        if volume.secret:
+            edges.append(ResourceEdge(
+                source_id=node_id,
+                target_id=ResourceNode.make_id(ResourceKind.SECRET, volume.secret, namespace),
+                relation=EdgeRelation.MOUNTS,
+                confidence=Confidence.EXTRACTED,
+            ))
+        if volume.persistent_volume_claim:
+            edges.append(ResourceEdge(
+                source_id=node_id,
+                target_id=ResourceNode.make_id(ResourceKind.PERSISTENT_VOLUME_CLAIM, volume.persistent_volume_claim, namespace),
+                relation=EdgeRelation.MOUNTS,
+                confidence=Confidence.EXTRACTED,
+            ))
+    return edges
 
 
 @ExtractorRegistry.register("Pod")
@@ -84,7 +99,6 @@ def extract_pod(raw: Raw) -> Extracted:
     edges: list[ResourceEdge] = []
     edges.extend(owner_edges(ResourceKind.POD, pod.name, pod.namespace, pod.owner_references))
     edges.append(namespace_edge(ResourceKind.POD, pod.name, pod.namespace))
-
     if pod.node_name:
         edges.append(ResourceEdge(
             source_id=node.id,
@@ -99,29 +113,7 @@ def extract_pod(raw: Raw) -> Extracted:
             relation=EdgeRelation.USES_SERVICE_ACCOUNT,
             confidence=Confidence.EXTRACTED,
         ))
-    for volume in pod.volumes:
-        if volume.config_map:
-            edges.append(ResourceEdge(
-                source_id=node.id,
-                target_id=ResourceNode.make_id(ResourceKind.CONFIG_MAP, volume.config_map, pod.namespace),
-                relation=EdgeRelation.MOUNTS,
-                confidence=Confidence.EXTRACTED,
-            ))
-        if volume.secret:
-            edges.append(ResourceEdge(
-                source_id=node.id,
-                target_id=ResourceNode.make_id(ResourceKind.SECRET, volume.secret, pod.namespace),
-                relation=EdgeRelation.MOUNTS,
-                confidence=Confidence.EXTRACTED,
-            ))
-        if volume.persistent_volume_claim:
-            edges.append(ResourceEdge(
-                source_id=node.id,
-                target_id=ResourceNode.make_id(ResourceKind.PERSISTENT_VOLUME_CLAIM, volume.persistent_volume_claim, pod.namespace),
-                relation=EdgeRelation.MOUNTS,
-                confidence=Confidence.EXTRACTED,
-            ))
-
+    edges.extend(_volume_edges(node.id, pod.namespace, pod.volumes))
     nodes = [node]
     if pair := manifest_result(raw, node.id):
         nodes.append(pair[0])

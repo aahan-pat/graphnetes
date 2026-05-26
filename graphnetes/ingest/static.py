@@ -21,6 +21,13 @@ RawResource = dict[str, Any]
 KUBECONFIG = Path.home() / ".kube" / "config"
 
 
+def _is_excluded(kind: str, raw: RawResource, exclude: set[str]) -> bool:
+    meta = raw.get("metadata") or {}
+    if kind == "Namespace":
+        return meta.get("name") in exclude
+    return meta.get("namespace") in exclude
+
+
 # Kubeconfig resolution
 #
 # Priority:
@@ -34,11 +41,7 @@ class StaticIngestor:
 
     @staticmethod
     def register(client: str, namespaced: str | None, cluster: str, kind: str) -> None:
-        """Register a Kubernetes API list call.
-
-        Pass None for namespaced when the resource is cluster-scoped and has no
-        namespaced list method (e.g. Namespace, Node, PersistentVolume).
-        """
+        """Register a Kubernetes API list call."""
         StaticIngestor.calls.append((client, namespaced, cluster, kind))
 
     def __init__(
@@ -111,11 +114,6 @@ class StaticIngestor:
             for item in method(*args).items:
                 raw = item.to_dict()
                 raw["kind"] = kind
-                if exclude:
-                    meta = raw.get("metadata") or {}
-                    if kind == "Namespace":
-                        if meta.get("name") in exclude:
-                            continue
-                    elif meta.get("namespace") in exclude:
-                        continue
+                if exclude and _is_excluded(kind, raw, exclude):
+                    continue
                 yield raw

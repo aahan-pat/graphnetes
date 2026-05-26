@@ -6,7 +6,7 @@ from rich.console import Console
 
 from graphnetes.build.graph import GraphBuilder
 from graphnetes.export.graph import export
-from graphnetes.extract import EXTRACTORS
+from graphnetes.extract import ExtractorRegistry
 from graphnetes.ingest.static import StaticIngestor
 
 app = typer.Typer(help="Build a knowledge graph from a live cluster or local manifests.")
@@ -25,8 +25,8 @@ def build(
             kubeconfig=str(kubeconfig) if kubeconfig else None,
             context=context,
         )
-    except (FileNotFoundError, RuntimeError) as e:
-        console.print(f"[red]Failed to load kubeconfig:[/red] {e}")
+    except (FileNotFoundError, RuntimeError) as error:
+        console.print(f"[red]Failed to load kubeconfig:[/red] {error}")
         raise typer.Exit(code=1)
 
     console.print(f"[green]Connected to cluster:[/green] {ingestor.configuration.host}")
@@ -34,7 +34,7 @@ def build(
     builder = GraphBuilder()
 
     for raw in ingestor.fetch(namespace=namespace):
-        extract = EXTRACTORS.get(raw.get("kind", ""))
+        extract = ExtractorRegistry.extractors.get(raw.get("kind", ""))
         if extract is None:
             continue
         nodes, edges = extract(raw)

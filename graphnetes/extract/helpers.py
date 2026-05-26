@@ -10,15 +10,14 @@ from graphnetes.models import Confidence, EdgeRelation, ResourceEdge, ResourceKi
 
 from .models import OwnerReference
 
-_LAST_APPLIED = "kubectl.kubernetes.io/last-applied-configuration"
-
 
 def owner_edges(
     kind: ResourceKind,
     name: str,
     namespace: str | None,
-    refs: list[OwnerReference],
+    references: list[OwnerReference],
 ) -> list[ResourceEdge]:
+    # ownerReferences are stored on the owned resource, so this node is the edge target.
     source_id = ResourceNode.make_id(kind, name, namespace)
     return [
         ResourceEdge(
@@ -27,7 +26,7 @@ def owner_edges(
             relation=EdgeRelation.OWNS,
             confidence=Confidence.EXTRACTED,
         )
-        for ref in refs
+        for ref in references
     ]
 
 
@@ -43,7 +42,7 @@ def namespace_edge(kind: ResourceKind, name: str, namespace: str) -> ResourceEdg
 def manifest_result(raw: dict[str, Any], source_id: str) -> tuple[ResourceNode, ResourceEdge] | None:
     """Return a Manifest node and configured_by edge if the last-applied annotation is present."""
     annotations = (raw.get("metadata") or {}).get("annotations") or {}
-    raw_annotation = annotations.get(_LAST_APPLIED)
+    raw_annotation = annotations.get("kubectl.kubernetes.io/last-applied-configuration")
     if not raw_annotation:
         return None
     digest = hashlib.sha256(raw_annotation.encode()).hexdigest()[:12]

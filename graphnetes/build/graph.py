@@ -59,10 +59,12 @@ class GraphBuilder:
 
     def get_nodes_by_kind(self, kind: ResourceKind) -> list[ResourceNode]:
         """Return all nodes of a given kind."""
+        # Nodes without a "data" attribute are stubs that NetworkX creates when an edge
+        # references an ID that was never explicitly added.
         return [
-            self.graph.nodes[n]["data"]
-            for n in self.graph.nodes
-            if "data" in self.graph.nodes[n] and self.graph.nodes[n]["data"].kind == kind
+            self.graph.nodes[node_id]["data"]
+            for node_id in self.graph.nodes
+            if "data" in self.graph.nodes[node_id] and self.graph.nodes[node_id]["data"].kind == kind
         ]
 
     def build_selector_edges(self) -> None:
@@ -90,6 +92,8 @@ class GraphBuilder:
                     continue
                 selector_items = selector.items()
                 for pod in pods:
+                    # dict_items supports <= as a subset test, returning True when every
+                    # selector key-value pair is present in pod.labels.
                     if selector_items <= pod.labels.items():
                         self.add_edge(ResourceEdge(
                             source_id=controller.id,
@@ -101,9 +105,9 @@ class GraphBuilder:
     def stats(self) -> dict:
         """Return node count, edge count, and breakdown by kind."""
         kind_counts = Counter(
-            self.graph.nodes[n]["data"].kind.value
-            for n in self.graph.nodes
-            if "data" in self.graph.nodes[n]
+            self.graph.nodes[node_id]["data"].kind.value
+            for node_id in self.graph.nodes
+            if "data" in self.graph.nodes[node_id]
         )
         return {
             "nodes": self.graph.number_of_nodes(),

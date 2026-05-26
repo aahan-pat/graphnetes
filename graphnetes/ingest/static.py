@@ -20,15 +20,6 @@ RawResource = dict[str, Any]
 
 KUBECONFIG = Path.home() / ".kube" / "config"
 
-# Each tuple: (api client attr, namespaced list method, cluster-wide list method, kind string to inject).
-# Kind must be injected because the k8s list API always returns kind=None on items.
-API_CALLS: list[tuple[str, str, str, str]] = [
-    ("v1", "list_namespaced_pod", "list_pod_for_all_namespaces", "Pod"),
-    ("apps_v1", "list_namespaced_deployment", "list_deployment_for_all_namespaces", "Deployment"),
-    ("apps_v1", "list_namespaced_replica_set", "list_replica_set_for_all_namespaces", "ReplicaSet"),
-    ("apps_v1", "list_namespaced_stateful_set", "list_stateful_set_for_all_namespaces", "StatefulSet"),
-    ("apps_v1", "list_namespaced_daemon_set", "list_daemon_set_for_all_namespaces", "DaemonSet"),
-]
 
 # Kubeconfig resolution
 #
@@ -38,6 +29,14 @@ API_CALLS: list[tuple[str, str, str, str]] = [
 #   3. ~/.kube/config
 #   4. Error
 class StaticIngestor:
+
+    calls: list[tuple[str, str, str, str]] = []
+
+    @staticmethod
+    def register(client: str, namespaced: str, cluster: str, kind: str) -> None:
+        """Register a Kubernetes API list call."""
+        StaticIngestor.calls.append((client, namespaced, cluster, kind))
+
     def __init__(
         self,
         kubeconfig: str | None = None,
@@ -90,11 +89,11 @@ class StaticIngestor:
         Scopes to namespace if given, otherwise fetches the full cluster.
         Injects the kind string on each item because the k8s list API returns kind=None.
         """
-        for client_name, namespaced_method, cluster_method, kind in API_CALLS:
+        for client_name, namespaced_method, cluster_method, kind in StaticIngestor.calls:
             api = getattr(self, client_name)
             method = getattr(api, namespaced_method if namespace else cluster_method)
-            call_args = (namespace,) if namespace else ()
-            for item in method(*call_args).items:
-                raw_json = item.to_dict()
-                raw_json["kind"] = kind
-                yield raw_json
+            args = (namespace,) if namespace else ()
+            for item in method(*args).items:
+                raw = item.to_dict()
+                raw["kind"] = kind
+                yield raw

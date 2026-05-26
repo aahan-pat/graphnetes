@@ -18,8 +18,8 @@ class OwnerReference:
     uid: str
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> OwnerReference:
-        return cls(kind=d["kind"], name=d["name"], uid=d["uid"])
+    def from_dict(cls, raw: dict[str, Any]) -> OwnerReference:
+        return cls(kind=raw["kind"], name=raw["name"], uid=raw["uid"])
 
 
 @dataclass
@@ -29,11 +29,11 @@ class VolumeMount:
     read_only: bool
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> VolumeMount:
+    def from_dict(cls, raw: dict[str, Any]) -> VolumeMount:
         return cls(
-            name=d["name"],
-            mount_path=d["mount_path"],
-            read_only=d.get("read_only") or False,
+            name=raw["name"],
+            mount_path=raw["mount_path"],
+            read_only=raw.get("read_only") or False,
         )
 
 
@@ -44,11 +44,11 @@ class Container:
     volume_mounts: list[VolumeMount] = field(default_factory=list)
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> Container:
+    def from_dict(cls, raw: dict[str, Any]) -> Container:
         return cls(
-            name=d["name"],
-            image=d["image"],
-            volume_mounts=[VolumeMount.from_dict(v) for v in d.get("volume_mounts") or []],
+            name=raw["name"],
+            image=raw["image"],
+            volume_mounts=[VolumeMount.from_dict(mount) for mount in raw.get("volume_mounts") or []],
         )
 
 
@@ -61,20 +61,18 @@ class Volume:
     persistent_volume_claim: str | None = None
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> Volume:
-        config_map = None
-        if cm := d.get("config_map"):
-            config_map = cm.get("name")
-
-        secret = None
-        if s := d.get("secret"):
-            secret = s.get("secret_name")
-
-        pvc = None
-        if p := d.get("persistent_volume_claim"):
-            pvc = p.get("claim_name")
-
-        return cls(name=d["name"], config_map=config_map, secret=secret, persistent_volume_claim=pvc)
+    def from_dict(cls, raw: dict[str, Any]) -> Volume:
+        # The k8s Python client returns None for absent optional nested objects, not a
+        # missing key, so `or {}` is required before chaining .get().
+        config_map = (raw.get("config_map") or {}).get("name")
+        secret = (raw.get("secret") or {}).get("secret_name")
+        persistent_volume_claim = (raw.get("persistent_volume_claim") or {}).get("claim_name")
+        return cls(
+            name=raw["name"],
+            config_map=config_map,
+            secret=secret,
+            persistent_volume_claim=persistent_volume_claim,
+        )
 
 
 @dataclass
@@ -83,8 +81,8 @@ class PodCondition:
     status: str
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> PodCondition:
-        return cls(type=d["type"], status=d["status"])
+    def from_dict(cls, raw: dict[str, Any]) -> PodCondition:
+        return cls(type=raw["type"], status=raw["status"])
 
 
 @dataclass
@@ -103,23 +101,23 @@ class Pod:
     conditions: list[PodCondition]
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> Pod:
-        metadata = d.get("metadata") or {}
-        spec = d.get("spec") or {}
-        status = d.get("status") or {}
+    def from_dict(cls, raw: dict[str, Any]) -> Pod:
+        metadata = raw.get("metadata") or {}
+        spec = raw.get("spec") or {}
+        status = raw.get("status") or {}
         return cls(
             name=metadata["name"],
             namespace=metadata["namespace"],
             uid=metadata["uid"],
             labels=metadata.get("labels") or {},
             annotations=metadata.get("annotations") or {},
-            owner_references=[OwnerReference.from_dict(o) for o in metadata.get("owner_references") or []],
+            owner_references=[OwnerReference.from_dict(owner) for owner in metadata.get("owner_references") or []],
             node_name=spec.get("node_name"),
             service_account_name=spec.get("service_account_name"),
-            containers=[Container.from_dict(c) for c in spec.get("containers") or []],
-            volumes=[Volume.from_dict(v) for v in spec.get("volumes") or []],
+            containers=[Container.from_dict(container) for container in spec.get("containers") or []],
+            volumes=[Volume.from_dict(volume) for volume in spec.get("volumes") or []],
             phase=status.get("phase"),
-            conditions=[PodCondition.from_dict(c) for c in status.get("conditions") or []],
+            conditions=[PodCondition.from_dict(condition) for condition in status.get("conditions") or []],
         )
 
 
@@ -135,16 +133,16 @@ class Deployment:
     replicas: int | None
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> Deployment:
-        metadata = d.get("metadata") or {}
-        spec = d.get("spec") or {}
+    def from_dict(cls, raw: dict[str, Any]) -> Deployment:
+        metadata = raw.get("metadata") or {}
+        spec = raw.get("spec") or {}
         return cls(
             name=metadata["name"],
             namespace=metadata["namespace"],
             uid=metadata["uid"],
             labels=metadata.get("labels") or {},
             annotations=metadata.get("annotations") or {},
-            owner_references=[OwnerReference.from_dict(o) for o in metadata.get("owner_references") or []],
+            owner_references=[OwnerReference.from_dict(owner) for owner in metadata.get("owner_references") or []],
             selector=(spec.get("selector") or {}).get("match_labels") or {},
             replicas=spec.get("replicas"),
         )
@@ -162,16 +160,16 @@ class ReplicaSet:
     replicas: int | None
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> ReplicaSet:
-        metadata = d.get("metadata") or {}
-        spec = d.get("spec") or {}
+    def from_dict(cls, raw: dict[str, Any]) -> ReplicaSet:
+        metadata = raw.get("metadata") or {}
+        spec = raw.get("spec") or {}
         return cls(
             name=metadata["name"],
             namespace=metadata["namespace"],
             uid=metadata["uid"],
             labels=metadata.get("labels") or {},
             annotations=metadata.get("annotations") or {},
-            owner_references=[OwnerReference.from_dict(o) for o in metadata.get("owner_references") or []],
+            owner_references=[OwnerReference.from_dict(owner) for owner in metadata.get("owner_references") or []],
             selector=(spec.get("selector") or {}).get("match_labels") or {},
             replicas=spec.get("replicas"),
         )
@@ -190,23 +188,24 @@ class StatefulSet:
     volume_claim_template_names: list[str]
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> StatefulSet:
-        metadata = d.get("metadata") or {}
-        spec = d.get("spec") or {}
+    def from_dict(cls, raw: dict[str, Any]) -> StatefulSet:
+        metadata = raw.get("metadata") or {}
+        spec = raw.get("spec") or {}
         return cls(
             name=metadata["name"],
             namespace=metadata["namespace"],
             uid=metadata["uid"],
             labels=metadata.get("labels") or {},
             annotations=metadata.get("annotations") or {},
-            owner_references=[OwnerReference.from_dict(o) for o in metadata.get("owner_references") or []],
+            owner_references=[OwnerReference.from_dict(owner) for owner in metadata.get("owner_references") or []],
             selector=(spec.get("selector") or {}).get("match_labels") or {},
             replicas=spec.get("replicas"),
             volume_claim_template_names=[
-                (t.get("metadata") or {}).get("name", "")
-                for t in spec.get("volume_claim_templates") or []
+                (template.get("metadata") or {}).get("name", "")
+                for template in spec.get("volume_claim_templates") or []
             ],
         )
+
 
 @dataclass
 class DaemonSet:
@@ -219,15 +218,15 @@ class DaemonSet:
     selector: dict[str, str]
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> DaemonSet:
-        metadata = d.get("metadata") or {}
-        spec = d.get("spec") or {}
+    def from_dict(cls, raw: dict[str, Any]) -> DaemonSet:
+        metadata = raw.get("metadata") or {}
+        spec = raw.get("spec") or {}
         return cls(
             name=metadata["name"],
             namespace=metadata["namespace"],
             uid=metadata["uid"],
             labels=metadata.get("labels") or {},
             annotations=metadata.get("annotations") or {},
-            owner_references=[OwnerReference.from_dict(o) for o in metadata.get("owner_references") or []],
+            owner_references=[OwnerReference.from_dict(owner) for owner in metadata.get("owner_references") or []],
             selector=(spec.get("selector") or {}).get("match_labels") or {},
         )

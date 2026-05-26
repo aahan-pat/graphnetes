@@ -48,6 +48,9 @@ class ResourceKind(str, Enum):
     CUSTOM_RESOURCE_DEFINITION = "CustomResourceDefinition"
     CUSTOM_RESOURCE = "CustomResource"
 
+    # Declarative configuration snapshot derived from the last-applied annotation.
+    MANIFEST = "Manifest"
+
     UNKNOWN = "Unknown"
 
     @classmethod

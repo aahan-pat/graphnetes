@@ -6,13 +6,11 @@ from rich.console import Console
 
 from graphnetes.build.graph import GraphBuilder
 from graphnetes.export.graph import export
-from graphnetes.extract.pod import PodExtractor
+from graphnetes.extract import EXTRACTORS
 from graphnetes.ingest.static import StaticIngestor
 
 app = typer.Typer(help="Build a knowledge graph from a live cluster or local manifests.")
 console = Console()
-
-extractor = PodExtractor()
 
 
 @app.callback(invoke_without_command=True)
@@ -36,9 +34,14 @@ def build(
     builder = GraphBuilder()
 
     for raw in ingestor.fetch(namespace=namespace):
-        node, edges = extractor.extract(raw)
-        builder.add_node(node)
+        extract = EXTRACTORS.get(raw.get("kind", ""))
+        if extract is None:
+            continue
+        nodes, edges = extract(raw)
+        builder.add_nodes(nodes)
         builder.add_edges(edges)
+
+    builder.build_selector_edges()
 
     stats = builder.stats()
     console.print(f"[green]Graph built:[/green] {stats['nodes']} nodes, {stats['edges']} edges")

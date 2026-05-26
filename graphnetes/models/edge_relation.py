@@ -26,3 +26,5 @@ class EdgeRelation(str, Enum):
     COMMUNICATES_WITH = "communicates_with"
     # A RoleBinding granting a Role to a ServiceAccount.
     GRANTS = "grants"
+    # A resource whose configuration was last applied from a manifest snapshot.
+    CONFIGURED_BY = "configured_by"

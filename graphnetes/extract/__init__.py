@@ -1,3 +1,3 @@
-from .pod import PodExtractor
+from .extractors import EXTRACTORS
 
-__all__ = ["PodExtractor"]
+__all__ = ["EXTRACTORS"]

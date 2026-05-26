@@ -15,11 +15,20 @@ from typing import Any, Generator
 from kubernetes import client, config
 from kubernetes.config.config_exception import ConfigException
 
-
+# A Kubernetes resource as returned by the SDK's .to_dict() — untyped, unvalidated.
 RawResource = dict[str, Any]
 
-_DEFAULT_KUBECONFIG = Path.home() / ".kube" / "config"
+KUBECONFIG = Path.home() / ".kube" / "config"
 
+# Each tuple: (api client attr, namespaced list method, cluster-wide list method, kind string to inject).
+# Kind must be injected because the k8s list API always returns kind=None on items.
+API_CALLS: list[tuple[str, str, str, str]] = [
+    ("v1", "list_namespaced_pod", "list_pod_for_all_namespaces", "Pod"),
+    ("apps_v1", "list_namespaced_deployment", "list_deployment_for_all_namespaces", "Deployment"),
+    ("apps_v1", "list_namespaced_replica_set", "list_replica_set_for_all_namespaces", "ReplicaSet"),
+    ("apps_v1", "list_namespaced_stateful_set", "list_stateful_set_for_all_namespaces", "StatefulSet"),
+    ("apps_v1", "list_namespaced_daemon_set", "list_daemon_set_for_all_namespaces", "DaemonSet"),
+]
 
 # Kubeconfig resolution
 #
@@ -28,8 +37,6 @@ _DEFAULT_KUBECONFIG = Path.home() / ".kube" / "config"
 #   2. KUBECONFIG environment variable
 #   3. ~/.kube/config
 #   4. Error
-
-
 class StaticIngestor:
     def __init__(
         self,
@@ -59,9 +66,9 @@ class StaticIngestor:
             except ConfigException as e:
                 raise RuntimeError(f"KUBECONFIG is set but could not be loaded: {e}") from e
 
-        elif _DEFAULT_KUBECONFIG.exists():
+        elif KUBECONFIG.exists():
             config.load_kube_config(
-                config_file=str(_DEFAULT_KUBECONFIG),
+                config_file=str(KUBECONFIG),
                 context=context,
                 client_configuration=configuration,
             )
@@ -75,23 +82,19 @@ class StaticIngestor:
         self.configuration = configuration
         self.api_client = client.ApiClient(configuration)
         self.v1 = client.CoreV1Api(self.api_client)
-
-    # Fetching
-    def fetch_namespace(self, namespace: str) -> Generator[RawResource, None, None]:
-        """Yield raw resource dicts for all resources in a single namespace."""
-        for pod in self.v1.list_namespaced_pod(namespace):
-            yield pod.to_dict()
-
-    def fetch_cluster(self) -> Generator[RawResource, None, None]:
-        """Yield raw resource dicts for all resources across every namespace in the cluster."""
-        for pod in self.v1.list_pod_for_all_namespaces(watch=False).items:
-            yield pod.to_dict()
+        self.apps_v1 = client.AppsV1Api(self.api_client)
 
     def fetch(self, namespace: str | None = None) -> Generator[RawResource, None, None]:
+        """Yield raw dicts for all supported resource kinds.
+
+        Scopes to namespace if given, otherwise fetches the full cluster.
+        Injects the kind string on each item because the k8s list API returns kind=None.
         """
-        Main entry point. Scopes to namespace if given, otherwise fetches the full cluster.
-        """
-        if namespace:
-            yield from self.fetch_namespace(namespace)
-        else:
-            yield from self.fetch_cluster()
+        for client_name, namespaced_method, cluster_method, kind in API_CALLS:
+            api = getattr(self, client_name)
+            method = getattr(api, namespaced_method if namespace else cluster_method)
+            call_args = (namespace,) if namespace else ()
+            for item in method(*call_args).items:
+                raw_json = item.to_dict()
+                raw_json["kind"] = kind
+                yield raw_json

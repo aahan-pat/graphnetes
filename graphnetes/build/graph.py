@@ -11,7 +11,7 @@ from collections import Counter
 
 import networkx as nx
 
-from graphnetes.models import ResourceEdge, ResourceKind, ResourceNode
+from graphnetes.models import Confidence, EdgeRelation, ResourceEdge, ResourceKind, ResourceNode
 
 
 class GraphBuilder:
@@ -56,6 +56,47 @@ class GraphBuilder:
         """Return a subgraph scoped to a single namespace."""
         node_ids = self._namespace_index.get(namespace, [])
         return self.graph.subgraph(node_ids)
+
+    def get_nodes_by_kind(self, kind: ResourceKind) -> list[ResourceNode]:
+        """Return all nodes of a given kind."""
+        return [
+            self.graph.nodes[n]["data"]
+            for n in self.graph.nodes
+            if "data" in self.graph.nodes[n] and self.graph.nodes[n]["data"].kind == kind
+        ]
+
+    def build_selector_edges(self) -> None:
+        """Build selects edges between controllers and Pods by matching label selectors.
+
+        Runs as a post-processing pass after all nodes are added. For each controller
+        node that carries a selector in its metadata, checks every Pod node to see
+        whether the selector labels are a subset of the Pod's labels. Adds a selects
+        edge for each match.
+
+        Controllers covered: Deployment, ReplicaSet, StatefulSet, DaemonSet.
+        """
+        controller_kinds = [
+            ResourceKind.DEPLOYMENT,
+            ResourceKind.REPLICA_SET,
+            ResourceKind.STATEFUL_SET,
+            ResourceKind.DAEMON_SET,
+        ]
+        pods = self.get_nodes_by_kind(ResourceKind.POD)
+
+        for kind in controller_kinds:
+            for controller in self.get_nodes_by_kind(kind):
+                selector: dict[str, str] = controller.metadata.get("selector") or {}
+                if not selector:
+                    continue
+                selector_items = selector.items()
+                for pod in pods:
+                    if selector_items <= pod.labels.items():
+                        self.add_edge(ResourceEdge(
+                            source_id=controller.id,
+                            target_id=pod.id,
+                            relation=EdgeRelation.SELECTS,
+                            confidence=Confidence.INFERRED,
+                        ))
 
     def stats(self) -> dict:
         """Return node count, edge count, and breakdown by kind."""

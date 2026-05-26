@@ -13,6 +13,7 @@ from enum import Enum
 from typing import Any, AsyncGenerator
 
 
+# A Kubernetes resource as returned by the SDK's .to_dict() — untyped, unvalidated.
 RawResource = dict[str, Any]
 
 
